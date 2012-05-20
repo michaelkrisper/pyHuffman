@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+        <link href='http://fonts.googleapis.com/css?family=Open+Sans' rel='stylesheet' type='text/css' />
+        <title>Offences</title>
+        <style type="text/css">
+            html {
+                font-family: "Open Sans";
+            }
+
+            #infovis {
+                width: 100%;
+                height: 500px;
+                margin: auto;
+            }
+            .node {
+                text-align: center;
+                padding: 0.5em;
+                margin: -0.5em;
+            }
+            .selected {
+                z-index: 100 !important;
+                background-color: lightgoldenrodyellow;
+                border: 1px black solid;
+                border-radius: 1em;
+            }
+            .class {
+                font-weight: bold;
+                z-index: 40;
+            }
+            .subclass {
+                z-index: 30;
+            }
+            .offence {
+                z-index: 20;
+            }
+            .suboffence {
+                z-index: 10;
+            }
+        </style>
+        <script type="text/javascript" src="scripts/jquery-1.3.2.min.js"></script>
+        <script type="text/javascript" src="scripts/rdfQuery/jquery.uri.js"></script>
+        <script type="text/javascript" src="scripts/rdfQuery/jquery.xmlns.js"></script>
+        <script type="text/javascript" src="scripts/rdfQuery/jquery.curie.js"></script>
+        <script type="text/javascript" src="scripts/rdfQuery/jquery.datatype.js"></script>
+        <script type="text/javascript" src="scripts/rdfQuery/jquery.rdf.js"></script>
+        <script type="text/javascript" src="scripts/jit-2.0.1.js"></script>
+        <script type="text/javascript">
+            $(document).ready(function() {
+                //When the document has finished loading...
+
+                // file the dropdown with data
+                var selectedData = $.uri.base().query ? decodeURIComponent($.uri.base().query.substring(9)) : undefined;
+                $.get('http://www.student.tugraz.at/michael.krisper/ivis/offence/offence.xml', null, function(rdfXml) {
+                    var lastSelected;
+                    $.rdf()
+                    .load(rdfXml)
+                    .prefix('skos', 'http://www.w3.org/2004/02/skos/core#')
+                    .where('<http://www.student.tugraz.at/michael.krisper/ivis/offence/> skos:hasTopConcept ?klass')
+                    .where('?klass skos:prefLabel ?label')
+                    .each(function() {
+                        $('#offences')
+                        .append('<option value="' + this.klass.value + '"' + (selectedData == this.klass.value ? ' selected>' : '>') + this.label.value + '</option>')
+                        .bind('change', function() {
+                            var selected = $(this).find(':selected').attr('value');
+                            if(selected !== lastSelected) {
+                                lastSelected = selected;
+                                $('form').submit();
+                            }
+                        });
+                        $('#loading').text('Please select a class of offence...');
+                        $('#offences').attr('disabled', '');
+                    });
+                }, 'xml');
+
+                //create the tree
+                var ht = createHyperTree();
+                
+                //fill the tree with data
+                if(selectedData !== undefined) {
+                    $.get(selectedData + ".xml", null, function(rdfXml) {
+                        var jsonData = convertToJSON(rdfXml, selectedData);
+                        ht.loadJSON(jsonData);
+                        ht.refresh();
+                    }, 'xml');
+                }
+            });
+
+            function createHyperTree(){
+                var infovis = $('#infovis');
+                
+                var ht;
+                ht = new $jit.Hypertree({
+	            injectInto : 'infovis',
+                    width : infovis.offsetwidth - 50,
+                    height : infovis.offsetheight - 50,
+                    Node : { dim: 9, color:"darkcyan"},
+                    Edge : { lineWidth: 2, color:"darkcyan"},
+                    transition: $jit.Trans.Quart.easeOut,
+                    duration: 1000,
+                    onCreateLabel : function(domElement, node) {
+                        var el = $(domElement);
+                        el.text(node.name);
+                        el.addClass(node.data.type);
+                        el.click(function() {
+                            ht.onClick(node.id);
+                        });
+                        
+                        el.hover(
+                        function() {
+                            $(this).addClass('selected');
+                        },
+                        function() {
+                            $(this).removeClass('selected');
+                        });
+                    },
+                    onPlaceLabel : function(domElement, node) {
+                        var el = $(domElement);
+                        el.css('font-size', (1.0 / node._depth) + 'em');
+                        el.css('left', (parseInt(el.css('left')) - el.width() / 2) + 'px');
+                    }
+                });
+                return ht;
+            }
+
+            function convertToJSON(rdfXml, selectedData){
+                var offences = {};
+                var rdf = $.rdf().load(rdfXml).prefix('skos', 'http://www.w3.org/2004/02/skos/core#').prefix('crime', 'http://www.student.tugraz.at/michael.krisper/ivis/offence/crime#')
+
+                rdf.where('<' + selectedData + '> skos:prefLabel ?label').each(function() {
+                    offences.id = selectedData;
+                    offences.name = this.label.value;
+                    offences.data = {
+                        '$color' : '#0CC',
+                        'type' : 'class'
+                    };
+                    offences.children = rdf.where('<' + selectedData + '> skos:narrower ?subclass').where('?subclass skos:prefLabel ?label').map(function() {
+                        return {
+                            id : this.subclass.id,
+                            name : this.label.value,
+                            data : {
+                                'type' : 'subclass'
+                            },
+                            children : rdf.where(this.subclass + ' skos:narrower ?offence').where('?offence skos:prefLabel ?label').map(function() {
+                                return {
+                                    id : this.offence.id,
+                                    name : this.label.value,
+                                    data : {
+                                        'type' : 'offence'
+                                    },
+                                    children : rdf.where(this.offence + ' skos:narrower ?suboffence').where('?suboffence skos:prefLabel ?label').map(function() {
+                                        return {
+                                            id : this.suboffence.id,
+                                            name : this.label.value,
+                                            data : {
+                                                'type' : 'suboffence'
+                                            },
+                                            children : []
+                                        };
+                                    }).get()
+                                };
+                            }).get()
+                        };
+                    }).get();
+                });
+                return(offences);
+            }
+        </script>
+    </head>
+
+    <body>
+        <form action="#" method="get">
+            <a href="http://www.jenitennison.com/blog/node/123" class="mainlabel">This page was originally created by Jeni Tennison (http://www.jenitennison.com) and was adapted by Michael Krisper.</a>
+            <p>
+                <select id="offences" name="offences">
+                    <option id="loading">Loading...</option>
+                </select>
+            </p>
+        </form>
+        <div id="infovis"></div>
+    </body>
+</html>
