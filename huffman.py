@@ -8,18 +8,20 @@ __author__ = "Michael Krisper"
 __email__ = "michael.krisper@htu.tugraz.at"
 __date__ = "2012-05-20"
 
-def convertHuffmanTreeToCode(node, prefix=""):
+def convert_huffman_tree_to_code(node, prefix=""):
+    """Traverses all nodes in a tree and converts it to a code. left=1, right=0"""
     code = {}    
     if node:
         if len(node[1]) > 0:
             code[node[1]] = prefix
         if node[2]:
-            code.update(convertHuffmanTreeToCode(node[2], prefix + "1"))
+            code.update(convert_huffman_tree_to_code(node[2], prefix + "1"))
         if node[3]:
-            code.update(convertHuffmanTreeToCode(node[3], prefix + "0"))
+            code.update(convert_huffman_tree_to_code(node[3], prefix + "0"))
     return code
 
-def buildHuffmanTree(text, keylength=1):
+def build_huffman_tree(text, keylength=1):
+    """Builds a binary tree representing the letter frequency of the text"""
     charcount = {}
     
     pos = 0    
@@ -28,25 +30,25 @@ def buildHuffmanTree(text, keylength=1):
         charcount[key] = charcount.setdefault(key, 0) + 1
         pos += keylength
     
-    q = Queue.PriorityQueue()
+    prioq = Queue.PriorityQueue()
     for item in charcount.iteritems():
-        q.put_nowait((item[1], item[0], None, None)) 
+        prioq.put_nowait((item[1], item[0], None, None)) 
     
-    while q.qsize() > 1:
-        n1 = q.get_nowait()
-        n2 = q.get_nowait()
-        internalNode = (n1[0] + n2[0], "", n1, n2)
-        q.put_nowait(internalNode)
+    while prioq.qsize() > 1:
+        left = prioq.get_nowait()
+        right = prioq.get_nowait()
+        internal_node = (left[0] + right[0], "", left, right)
+        prioq.put_nowait(internal_node)
         
-    root = q.get_nowait()
-    return root
+    return prioq.get_nowait()
 
-def getHuffmanCode(text):
-    """Returns a Code-Dictionary { key=Letter, value=Huffman-Code } for the given Huffman-Tree"""
-    tree = buildHuffmanTree(text)
-    return convertHuffmanTreeToCode(tree)
+def get_huffman_code(text):
+    """Returns a Code-Dictionary { key=Character, value=Code }"""
+    tree = build_huffman_tree(text)
+    return convert_huffman_tree_to_code(tree)
 
-def encryptText(text, code):
+def encrypt_text(text, code):
+    """Encrypts a text with huffman-code"""
     crypted = []
     pos = 0
     keylength = len(code.keys()[0])
@@ -55,10 +57,10 @@ def encryptText(text, code):
         crypted.append(code[key])
         pos += keylength
     
-    cryptedText = "".join(crypted)
-    return cryptedText 
+    return "".join(crypted) 
 
-def decryptText(text, code):
+def decrypt_text(text, code):
+    """Decrypts a text with huffman-code"""
     decrypted = []
     pos = 0
     while pos < len(text):
@@ -72,30 +74,31 @@ def decryptText(text, code):
     return "".join(decrypted)
 
 def main(text):
+    """Shows sample usage of the functions for the Huffman-code."""
     print text
-    code = getHuffmanCode(text)
+    code = get_huffman_code(text)
     
     # print code
     for key, value in sorted(code.iteritems(), key=lambda x: (len(x[1]), x[1], x[0])):
         print "%s: %s" % (key, value)
 
-    cryptedText = encryptText(text, code)
-    decryptedText = decryptText(cryptedText, code)
-    assert decryptedText == text
+    crypted_text = encrypt_text(text, code)
+    decrypted_text = decrypt_text(crypted_text, code)
+    assert decrypted_text == text
     
-    print cryptedText
+    print crypted_text
     
-    codeText = ""
+    code_text = ""
     for key, value in code.iteritems():
-        codeText += (key * 8) + ":" + value + "\n"
+        code_text += (key * 8) + ":" + value + "\n"
         
     print "Code Length: %d, Text Length: %d, Crypted Text Length: %d - Percentage: %.1f %% / %.1f %% with Code" % \
-        (len(codeText), len(text) * 8, len(cryptedText), len(cryptedText) / (len(text) * 0.08), len(cryptedText + codeText) / (len(text) * 0.08)) 
+        (len(code_text), len(text) * 8, len(crypted_text), len(crypted_text) / (len(text) * 8.0) * 100, len(crypted_text + code_text) / (len(text) * 8.0) * 100) 
 
 if __name__ == "__main__":
-    text = """Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et 
+    TEXT = """Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et 
 dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd 
 gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet. Lorem ipsum dolor sit amet, consetetur sadipscing 
 elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos 
 et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet."""
-    main(text)
+    main(TEXT)
