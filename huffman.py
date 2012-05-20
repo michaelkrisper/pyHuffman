@@ -92,8 +92,11 @@ def main(text):
     for key, value in code.iteritems():
         code_text += (key * 8) + ":" + value + "\n"
         
-    print "Code Length: %d, Text Length: %d, Crypted Text Length: %d - Percentage: %.1f %% / %.1f %% with Code" % \
-        (len(code_text), len(text) * 8, len(crypted_text), len(crypted_text) / (len(text) * 8.0) * 100, len(crypted_text + code_text) / (len(text) * 8.0) * 100) 
+    result = (len(code_text),
+              len(text) * 8, len(crypted_text),
+              len(crypted_text) / (len(text) * 8.0) * 100,
+              len(crypted_text + code_text) / (len(text) * 8.0) * 100) 
+    print "Code Length: %d, Text Length: %d, Crypted Text Length: %d - Percentage: %.1f %% / %.1f %% with Code" % result
 
 if __name__ == "__main__":
     TEXT = """Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et 
