@@ -79,7 +79,7 @@ def main(text):
     code = get_huffman_code(text)
     
     # print code
-    for key, value in sorted(code.iteritems(), key=lambda x: (len(x[1]), x[1], x[0])):
+    for key, value in sorted(code.iteritems(), key=lambda (k, v): (len(k), k)):
         print "%s: %s" % (key, value)
 
     crypted_text = encrypt_text(text, code)
@@ -95,7 +95,7 @@ def main(text):
     result = (len(code_text),
               len(text) * 8, len(crypted_text),
               len(crypted_text) / (len(text) * 8.0) * 100,
-              len(crypted_text + code_text) / (len(text) * 8.0) * 100) 
+              len(crypted_text + code_text) / (len(text) * 8.0) * 100)
     print "Code Length: %d, Text Length: %d, Crypted Text Length: %d - Percentage: %.1f %% / %.1f %% with Code" % result
 
 if __name__ == "__main__":
