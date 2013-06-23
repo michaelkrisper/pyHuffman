@@ -1,7 +1,21 @@
 pyHuffman
 =========
 
-A module for encode/decode of text with Huffman-Coding
+A module for illustrating the encode/decode of text with Huffman-Coding.
+
+**Currently not intended to be used in real projects.** Due to my lack of knowledge of binary processing in python at 
+that time, I implemented the "binary" processing just by handling Strings of the character "1" and "0" (very ugly and complicated!!).
+Thats also the reason why I used the string-length as bit-count of the output code (to compare the size with the input).
+
+
+This was one of my first python programms, so many things are not as pythonic as they could be.
+
+
+### TODO:
+* Use REAL binary code, not just strings with '0' and '1'.
+* Performance Optimizations: Currently the conversion is very slow (probaby due to string-processing).
+
+---
 
 Sample:
 
