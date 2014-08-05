@@ -8,16 +8,25 @@ __author__ = "Michael Krisper"
 __email__ = "michael.krisper@htu.tugraz.at"
 __date__ = "2012-05-20"
 
-def convert_huffman_tree_to_code(node, prefix=""):
+def convert_huffman_tree_to_code(node, prefix = None):
     """Traverses all nodes in a tree and converts it to a code. left=1, right=0"""
     code = {}    
     if node:
         if len(node[1]) > 0:
-            code[node[1]] = prefix
+            if prefix:
+              code[node[1]] = prefix
+            else:
+              code[node[1]] = 0
         if node[2]:
-            code.update(convert_huffman_tree_to_code(node[2], prefix + "1"))
+            if prefix:
+              code.update(convert_huffman_tree_to_code(node[2], (prefix << 1) | 1))
+            else:
+              code.update(convert_huffman_tree_to_code(node[3], 1))
         if node[3]:
-            code.update(convert_huffman_tree_to_code(node[3], prefix + "0"))
+            if prefix:
+              code.update(convert_huffman_tree_to_code(node[3], prefix << 1))
+            else:
+              code.update(convert_huffman_tree_to_code(node[3], 0))
     return code
 
 def build_huffman_tree(text, keylength=1):
@@ -54,20 +63,23 @@ def encrypt_text(text, code):
     keylength = len(code.keys()[0])
     while pos < len(text):
         key = text[pos:pos + keylength]
-        crypted.append(code[key])
+        crypted.append(bin(code[key])[2:])
         pos += keylength
+        
     
-    return "".join(crypted) 
+    return int("".join(crypted),2) 
 
 def decrypt_text(text, code):
     """Decrypts a text with huffman-code"""
     decrypted = []
     pos = 0
+    text = bin(text)[2:]
+    print text
     while pos < len(text):
         for key, value in code.iteritems():
-            if text[pos:].startswith(value):
+            if text[pos:].startswith(bin(value)[2:]):
                 decrypted.append(key)
-                pos += len(value)
+                pos += len(bin(value)[2:])
                 break
         else:
             raise KeyError
@@ -84,18 +96,20 @@ def main(text):
 
     crypted_text = encrypt_text(text, code)
     decrypted_text = decrypt_text(crypted_text, code)
+    
     assert decrypted_text == text
+    
     
     print crypted_text
     
     code_text = ""
     for key, value in code.iteritems():
-        code_text += (key * 8) + ":" + value + "\n"
+        code_text += (key * 8) + ":" + bin(value)[2:] + "\n"
         
     result = (len(code_text),
-              len(text) * 8, len(crypted_text),
-              len(crypted_text) / (len(text) * 8.0) * 100,
-              len(crypted_text + code_text) / (len(text) * 8.0) * 100)
+              len(text) * 8, len(bin(crypted_text)[2:]),
+              len(bin(crypted_text)[2:]) / (len(text) * 8.0) * 100,
+              len(bin(crypted_text)[2:] + code_text) / (len(text) * 8.0) * 100)
     print "Code Length: %d, Text Length: %d, Crypted Text Length: %d - Percentage: %.1f %% / %.1f %% with Code" % result
 
 if __name__ == "__main__":
