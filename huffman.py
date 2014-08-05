@@ -8,20 +8,24 @@ __author__ = "Michael Krisper"
 __email__ = "michael.krisper@htu.tugraz.at"
 __date__ = "2012-05-20"
 
-def convert_huffman_tree_to_code(node, prefix=""):
+def convert_huffman_tree_to_code(node, prefix = 1):
     """Traverses all nodes in a tree and converts it to a code. left=1, right=0"""
     code = {}    
     if node:
         if len(node[1]) > 0:
             code[node[1]] = prefix
         if node[2]:
-            code.update(convert_huffman_tree_to_code(node[2], prefix + "1"))
+            code.update(convert_huffman_tree_to_code(node[2], (prefix << 1)))
         if node[3]:
-            code.update(convert_huffman_tree_to_code(node[3], prefix + "0"))
+            code.update(convert_huffman_tree_to_code(node[3], (prefix << 1) | 1))
     return code
 
 def build_huffman_tree(text, keylength=1):
-    """Builds a binary tree representing the letter frequency of the text"""
+    """
+    Builds a binary tree representing the letter frequency of the text.
+    Tree consists of tuples: (sortindex, character, left child, right child)
+    Internal nodes have character "", leaves have the respective encoded character.
+    """
     charcount = {}
     
     pos = 0    
@@ -49,25 +53,28 @@ def get_huffman_code(text):
 
 def encrypt_text(text, code):
     """Encrypts a text with huffman-code"""
-    crypted = []
+    crypted = 1
     pos = 0
     keylength = len(code.keys()[0])
     while pos < len(text):
         key = text[pos:pos + keylength]
-        crypted.append(code[key])
+        crypted = crypted << len(bin(code[key])[3:]) + int(bin(code[key])[3:],2)
+        #crypted.append(bin(code[key])[3:])
         pos += keylength
-    
-    return "".join(crypted) 
+        
+    return crypted
 
 def decrypt_text(text, code):
     """Decrypts a text with huffman-code"""
     decrypted = []
     pos = 0
+    text = bin(text)[2:]
+    print text
     while pos < len(text):
         for key, value in code.iteritems():
-            if text[pos:].startswith(value):
+            if text[pos:].startswith(bin(value)[3:]):
                 decrypted.append(key)
-                pos += len(value)
+                pos += len(bin(value)[3:])
                 break
         else:
             raise KeyError
@@ -80,22 +87,25 @@ def main(text):
     
     # print code
     for key, value in sorted(code.iteritems(), key=lambda (k, v): (len(k), k)):
-        print "%s: %s" % (key, value)
+        print "%s: %s" % (key, bin(value)[3:])
 
     crypted_text = encrypt_text(text, code)
+    print crypted_text
+    
     decrypted_text = decrypt_text(crypted_text, code)
+    
     assert decrypted_text == text
     
-    print crypted_text
+    
     
     code_text = ""
     for key, value in code.iteritems():
-        code_text += (key * 8) + ":" + value + "\n"
+        code_text += (key * 8) + ":" + bin(value)[2:] + "\n"
         
     result = (len(code_text),
-              len(text) * 8, len(crypted_text),
-              len(crypted_text) / (len(text) * 8.0) * 100,
-              len(crypted_text + code_text) / (len(text) * 8.0) * 100)
+              len(text) * 8, len(bin(crypted_text)[2:]),
+              len(bin(crypted_text)[2:]) / (len(text) * 8.0) * 100,
+              len(bin(crypted_text)[2:] + code_text) / (len(text) * 8.0) * 100)
     print "Code Length: %d, Text Length: %d, Crypted Text Length: %d - Percentage: %.1f %% / %.1f %% with Code" % result
 
 if __name__ == "__main__":
