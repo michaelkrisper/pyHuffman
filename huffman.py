@@ -1,52 +1,99 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Example script for encoding/decoding data with Huffman-coding
+"""
+This script provides a Python implementation of the Huffman coding algorithm.
+It can be used to compress and decompress both text and binary data.
+
+The script can be run from the command line with an optional file argument.
+If no file is provided, it will use a default Lorem Ipsum text.
+
 Usage:
-1) with default lorem-ipsum text: python huffman.py
-2) with an input file to encode:  python huffman.py <inputfile>
+1) With default lorem-ipsum text: python huffman.py
+2) With an input file to encode:  python huffman.py <inputfile>
 """
 
 import collections
 import heapq
 import struct
 import sys
+from typing import Union, Dict, Tuple, Any
 
-class TreeNode(object):
-    def __init__(self, value=None, count=1, left=None, right=None):
-        self.count = count
+
+class TreeNode:
+    """
+    A node in the Huffman tree.
+
+    Each node has a value (a character or byte), a frequency count,
+    and optional left and right children.
+    """
+
+    def __init__(self, value: Any = None, count: int = 1, left: 'TreeNode' = None, right: 'TreeNode' = None):
+        """
+        Initializes a TreeNode.
+
+        Args:
+            value: The character or byte this node represents.
+            count: The frequency of the character or byte.
+            left: The left child of the node.
+            right: The right child of the node.
+        """
         self.value = value
+        self.count = count
         self.left = left
         self.right = right
 
-    def isLeaf(self):
+    def is_leaf(self) -> bool:
+        """Checks if the node is a leaf (i.e., has no children)."""
         return not (self.left or self.right)
 
-    def __lt__(self, other):
+    def __lt__(self, other: 'TreeNode') -> bool:
+        """Compares two nodes based on their frequency count."""
         return self.count < other.count
 
-    def __add__(self, other):
+    def __add__(self, other: 'TreeNode') -> 'TreeNode':
+        """
+        Combines two nodes into a new parent node.
+
+        The new node's count is the sum of the children's counts.
+        """
         return TreeNode(None, self.count + other.count, self, other)
 
-    def __repr__(self):
-        return "TreeNode(%r, %r)" % (self.value, self.count)
+    def __repr__(self) -> str:
+        """Provides a string representation of the node."""
+        return f"TreeNode({self.value!r}, {self.count!r})"
 
-def get_huffman_code(text):
-    """Returns a Code-Dictionary { key=Character, value=Code }"""
 
-    def traverse_tree(node, prefix=()):
-        if node.isLeaf():
-            yield (node.value, prefix)
+def get_huffman_code(data: Union[str, bytes]) -> Dict[Any, Tuple[int, ...]]:
+    """
+    Generates a Huffman code dictionary for the input data.
+
+    This function builds a Huffman tree from the input data and traverses it
+    to create a dictionary that maps each character (or byte) to its
+    corresponding Huffman code.
+
+    Args:
+        data: The input string or bytes to encode.
+
+    Returns:
+        A dictionary where keys are characters/bytes and values are their
+        Huffman codes represented as tuples of 0s and 1s.
+    """
+
+    def traverse_tree(node: TreeNode, prefix: Tuple[int, ...] = ()):
+        """Recursively traverses the Huffman tree to build the codes."""
+        if node.is_leaf():
+            yield node.value, prefix
         else:
-            for v in traverse_tree(node.left, prefix + (0,)):
-                yield v
-            for v in traverse_tree(node.right, prefix + (1,)):
-                yield v
+            yield from traverse_tree(node.left, prefix + (0,))
+            yield from traverse_tree(node.right, prefix + (1,))
 
-    counter = collections.Counter(text)
+    # Count the frequency of each character/byte.
+    counter = collections.Counter(data)
+    # Create a leaf node for each character/byte.
     heap = [TreeNode(item, count) for item, count in counter.items()]
-
     heapq.heapify(heap)
 
+    # Build the Huffman tree by repeatedly combining the two nodes with the lowest frequency.
     while len(heap) >= 2:
         heapq.heappush(heap, heapq.heappop(heap) + heapq.heappop(heap))
 
@@ -55,23 +102,39 @@ def get_huffman_code(text):
 
     tree = heap[0]
 
-    if not tree.isLeaf():
+    # Handle the case of a single unique character.
+    if not tree.is_leaf():
         return dict(traverse_tree(tree))
     else:
-        # Handle the case with a single character
         return {tree.value: (0,)}
 
-def encrypt_text(text, code):
-    """Encrypts a text with huffman-code"""
+
+def encode_data(data: Union[str, bytes], code: Dict[Any, Tuple[int, ...]]) -> bytes:
+    """
+    Encodes data using the provided Huffman code.
+
+    This function converts the input data into a sequence of bits according to
+    the Huffman code, pads it to a full byte, and prepends a header with the
+    original number of bits.
+
+    Args:
+        data: The input string or bytes to encode.
+        code: The Huffman code dictionary generated by get_huffman_code.
+
+    Returns:
+        The encoded data as a byte string.
+    """
     bits = []
-    for char in text:
+    for char in data:
         bits.extend(code[char])
 
     num_bits = len(bits)
 
+    # Pad the bits to make the total length a multiple of 8.
     padding_len = (8 - num_bits % 8) % 8
     bits.extend([0] * padding_len)
 
+    # Convert the list of bits into a byte array.
     byte_array = bytearray()
     for i in range(0, len(bits), 8):
         byte = 0
@@ -80,21 +143,34 @@ def encrypt_text(text, code):
                 byte |= (1 << (7 - j))
         byte_array.append(byte)
 
-    # Prepend the number of bits.
+    # Prepend a header with the original number of bits.
     header = struct.pack('>L', num_bits)
     return header + byte_array
 
 
-def decrypt_text(crypted_data, code):
-    """Decrypts a text with huffman-code"""
+def decode_data(encoded_data: bytes, code: Dict[Any, Tuple[int, ...]]) -> Union[str, bytes]:
+    """
+    Decodes data using the provided Huffman code.
+
+    This function reads the header to get the original number of bits,
+    reconstructs the Huffman tree from the code, and traverses the tree to
+    decode the data.
+
+    Args:
+        encoded_data: The encoded data as a byte string.
+        code: The Huffman code dictionary used for encoding.
+
+    Returns:
+        The decoded data as a string or bytes, depending on the original input type.
+    """
     if not code:
-        return ""
+        return b"" if isinstance(next(iter(code.keys()), None), int) else ""
 
-    # Unpack header
-    num_bits = struct.unpack('>L', crypted_data[:4])[0]
-    byte_array = crypted_data[4:]
+    # Unpack the header to get the original number of bits.
+    num_bits = struct.unpack('>L', encoded_data[:4])[0]
+    byte_array = encoded_data[4:]
 
-    # Unpack bytes into bits
+    # Unpack the byte array into a list of bits.
     bits = []
     for byte in byte_array:
         for i in range(8):
@@ -103,11 +179,11 @@ def decrypt_text(crypted_data, code):
             else:
                 bits.append(0)
 
-    # Trim padding
+    # Trim the padding bits.
     if num_bits:
         bits = bits[:num_bits]
 
-    # Build the tree from the code
+    # Build the Huffman tree from the code for decoding.
     tree = TreeNode()
     for char, huffman_code in code.items():
         node = tree
@@ -122,8 +198,8 @@ def decrypt_text(crypted_data, code):
                 node = node.right
         node.value = char
 
-    # Decode by traversing the tree
-    decrypted_output = []
+    # Decode the data by traversing the tree.
+    decoded_output = []
     node = tree
     for bit in bits:
         if bit == 0:
@@ -131,49 +207,72 @@ def decrypt_text(crypted_data, code):
         else:
             node = node.right
 
-        if node.isLeaf():
-            decrypted_output.append(node.value)
-            node = tree # Reset to root for next character
+        if node.is_leaf():
+            decoded_output.append(node.value)
+            node = tree  # Reset to the root for the next character.
 
-    # Check the type of the first key to determine output type
+    # Determine the output type (string or bytes) based on the code keys.
     first_key = next(iter(code.keys()), None)
     if isinstance(first_key, int):
-        return bytes(decrypted_output)
+        return bytes(decoded_output)
     else:
-        return "".join(decrypted_output)
+        return "".join(decoded_output)
 
-def main(text):
-    """Shows sample usage of the functions for the Huffman-code."""
 
-    code = get_huffman_code(text)
+def run(data: Union[str, bytes]):
+    """
+    Runs the Huffman encoding and decoding process and prints the results.
 
-    # print the code
+    This function demonstrates the usage of the encoding and decoding functions
+    and prints statistics about the compression.
+
+    Args:
+        data: The input data to process.
+    """
+    # Generate the Huffman code for the data.
+    code = get_huffman_code(data)
+
+    # Print the generated code.
     for key, value in sorted(code.items(), key=lambda item: (len(item[1]), item[0])):
-        print("%s: %s" % (key, "".join(map(str, value))))
+        print(f"{key!r}: {''.join(map(str, value))}")
 
-    crypted_text = encrypt_text(text, code)
-    decrypted_text = decrypt_text(crypted_text, code)
+    # Encode and decode the data.
+    encoded_data = encode_data(data, code)
+    decoded_data = decode_data(encoded_data, code)
 
-    assert decrypted_text == text
+    # Verify that the decoded data matches the original.
+    assert decoded_data == data
 
+    # Calculate and print compression statistics.
     code_text = str(code)
-    text_len_bits = len(text) * 8
-    crypted_len_bits = len(crypted_text) * 8
+    text_len_bits = len(data) * 8
+    encoded_len_bits = len(encoded_data) * 8
     code_len_bits = len(code_text.encode('utf-8')) * 8
 
-    result = (code_len_bits,
-              text_len_bits, crypted_len_bits,
-              crypted_len_bits * 100.0 / text_len_bits,
-              (crypted_len_bits + code_len_bits) * 100.0 / text_len_bits)
-    print("Code Length (bits): %d, Text Length (bits): %d, Encrypted Text Length (bits): %d - Percentage: %.1f %% / (%.1f %% with Code)" % result)
+    print(f"\nCode Length (bits): {code_len_bits}")
+    print(f"Original Text Length (bits): {text_len_bits}")
+    print(f"Encoded Text Length (bits): {encoded_len_bits}")
+    if text_len_bits > 0:
+        percentage = encoded_len_bits * 100.0 / text_len_bits
+        percentage_with_code = (encoded_len_bits + code_len_bits) * 100.0 / text_len_bits
+        print(f"Compression Percentage: {percentage:.1f}%")
+        print(f"Compression Percentage (with code): {percentage_with_code:.1f}%")
+
 
 if __name__ == "__main__":
+    # If a file is provided as a command-line argument, read its content.
+    # Otherwise, use the default Lorem Ipsum text.
     if len(sys.argv) > 1:
-        TEXT = open(sys.argv[1], "rb").read()
+        try:
+            with open(sys.argv[1], "rb") as f:
+                TEXT = f.read()
+        except FileNotFoundError:
+            print(f"Error: File not found at {sys.argv[1]}", file=sys.stderr)
+            sys.exit(1)
     else:
         TEXT = """Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et 
 dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd 
 gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet. Lorem ipsum dolor sit amet, consetetur sadipscing 
 elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos 
 et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet."""
-    main(TEXT)
+    run(TEXT)
