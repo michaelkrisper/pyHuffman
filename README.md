@@ -1,5 +1,8 @@
 # pyHuffman
 
+[![Python](https://img.shields.io/badge/python-3.9%2B-blue.svg)](https://www.python.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 A Python script for illustrating the encoding and decoding of data using Huffman coding. This script can handle both text and binary files.
 
 ## Description
@@ -43,3 +46,19 @@ python3 -m unittest test_huffman.py
 ```
 
 You should see an output indicating that all tests passed successfully.
+
+## Requirements
+
+- Python 3.9 or newer — standard library only
+
+## Project structure
+
+| File | Purpose |
+|---|---|
+| `huffman.py` | Encoder, decoder, tree construction and CLI |
+| `test_huffman.py` | Unit tests covering text, binary and edge cases |
+| `testdata.html`, `testimage.jpg` | Sample inputs for text and binary encoding |
+
+## License
+
+MIT — see [LICENSE](LICENSE).
