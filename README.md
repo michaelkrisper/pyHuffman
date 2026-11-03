@@ -1,64 +1,72 @@
 # pyHuffman
 
-[![Python](https://img.shields.io/badge/python-3.9%2B-blue.svg)](https://www.python.org/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+Huffman coding in a single, dependency-free Python module - build the code, encode, decode, and see how much it saves.
 
-A Python script for illustrating the encoding and decoding of data using Huffman coding. This script can handle both text and binary files.
+[![CI](https://github.com/michaelkrisper/pyHuffman/actions/workflows/ci.yml/badge.svg)](https://github.com/michaelkrisper/pyHuffman/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue.svg)](https://www.python.org/)
 
-## Description
+## Features
 
-This project is a Python 3 implementation of the Huffman coding algorithm. It includes a script (`huffman.py`) that can be used to compress and decompress data. The script has been refactored for clarity and now includes comprehensive documentation and a test suite.
+- Builds an optimal prefix-free Huffman code from symbol frequencies (min-heap based)
+- Works on `str` (per character, full Unicode) and `bytes` (per byte, any binary file)
+- Packs the bit stream into bytes with a 4-byte header holding the exact bit count
+- Decodes back to the original type and verifies the round trip
+- Command-line demo that prints the code table and compression statistics
+- Standard library only
 
 ## Usage
 
-You can run the script from the command line. You can either provide a file as an argument for encoding or run it without arguments to use a default sample text.
-
-### With Default Text
-
-To run the script with the default Lorem Ipsum text, simply execute:
+### Command line
 
 ```bash
-python3 huffman.py
+python3 huffman.py                # encode a built-in Lorem Ipsum sample
+python3 huffman.py testdata.html  # encode any file (read as bytes)
 ```
 
-### With a File
+The script prints each symbol's code (shortest first) followed by statistics:
 
-To encode a specific file, provide the file path as a command-line argument:
+```
+Code Length (bits): 27728
+Original Text Length (bits): 839728
+Encoded Text Length (bits): 511880
+Compression Percentage: 61.0%
+Compression Percentage (with code): 64.3%
+```
+
+"with code" adds the size of the code table, which a decoder would need as well.
+
+### Library
+
+```python
+from huffman import decode_data, encode_data, get_huffman_code
+
+text = "abracadabra"
+code = get_huffman_code(text)        # {'a': (0,), 'd': (1, 0, 0), ...}
+encoded = encode_data(text, code)    # bytes: 4-byte bit count + packed bits
+assert decode_data(encoded, code) == text
+```
+
+The code table is not embedded in the encoded output; keep it alongside the data.
+
+## Development
 
 ```bash
-python3 huffman.py [file_path]
+pip install pytest ruff
+pytest      # run the test suite
+ruff check  # lint
 ```
 
-For example, to encode the provided `testdata.html`:
-
-```bash
-python3 huffman.py testdata.html
-```
-
-## Testing
-
-A test suite is included to verify the functionality of the Huffman coding implementation. The tests cover various scenarios, including simple text, empty strings, and different file types.
-
-To run the tests, execute the following command from the root directory:
-
-```bash
-python3 -m unittest test_huffman.py
-```
-
-You should see an output indicating that all tests passed successfully.
-
-## Requirements
-
-- Python 3.9 or newer — standard library only
+CI runs both on every push and pull request against Python 3.9 to 3.14.
 
 ## Project structure
 
 | File | Purpose |
-|---|---|
-| `huffman.py` | Encoder, decoder, tree construction and CLI |
-| `test_huffman.py` | Unit tests covering text, binary and edge cases |
+| --- | --- |
+| `huffman.py` | Tree construction, encoder, decoder and CLI |
+| `test_huffman.py` | Unit tests: round trips, code properties, edge cases |
 | `testdata.html`, `testimage.jpg` | Sample inputs for text and binary encoding |
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT - see [LICENSE](LICENSE).
