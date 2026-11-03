@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 This script provides a Python implementation of the Huffman coding algorithm.
 It can be used to compress and decompress both text and binary data.
@@ -16,7 +15,7 @@ import collections
 import heapq
 import struct
 import sys
-from typing import Union, Dict, Tuple, Any
+from typing import Any, Union
 
 
 class TreeNode:
@@ -63,7 +62,7 @@ class TreeNode:
         return f"TreeNode({self.value!r}, {self.count!r})"
 
 
-def get_huffman_code(data: Union[str, bytes]) -> Dict[Any, Tuple[int, ...]]:
+def get_huffman_code(data: Union[str, bytes]) -> dict[Any, tuple[int, ...]]:
     """
     Generates a Huffman code dictionary for the input data.
 
@@ -79,7 +78,7 @@ def get_huffman_code(data: Union[str, bytes]) -> Dict[Any, Tuple[int, ...]]:
         Huffman codes represented as tuples of 0s and 1s.
     """
 
-    def traverse_tree(node: TreeNode, prefix: Tuple[int, ...] = ()):
+    def traverse_tree(node: TreeNode, prefix: tuple[int, ...] = ()):
         """Recursively traverses the Huffman tree to build the codes."""
         if node.is_leaf():
             yield node.value, prefix
@@ -109,7 +108,7 @@ def get_huffman_code(data: Union[str, bytes]) -> Dict[Any, Tuple[int, ...]]:
         return {tree.value: (0,)}
 
 
-def encode_data(data: Union[str, bytes], code: Dict[Any, Tuple[int, ...]]) -> bytes:
+def encode_data(data: Union[str, bytes], code: dict[Any, tuple[int, ...]]) -> bytes:
     """
     Encodes data using the provided Huffman code.
 
@@ -148,7 +147,7 @@ def encode_data(data: Union[str, bytes], code: Dict[Any, Tuple[int, ...]]) -> by
     return header + byte_array
 
 
-def decode_data(encoded_data: bytes, code: Dict[Any, Tuple[int, ...]]) -> Union[str, bytes]:
+def decode_data(encoded_data: bytes, code: dict[Any, tuple[int, ...]]) -> Union[str, bytes]:
     """
     Decodes data using the provided Huffman code.
 
@@ -270,9 +269,16 @@ if __name__ == "__main__":
             print(f"Error: File not found at {sys.argv[1]}", file=sys.stderr)
             sys.exit(1)
     else:
-        TEXT = """Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et 
-dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd 
-gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet. Lorem ipsum dolor sit amet, consetetur sadipscing 
-elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos 
-et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet."""
+        TEXT = (
+            "Lorem ipsum dolor sit amet, consetetur sadipscing elitr, "
+            "sed diam nonumy eirmod tempor invidunt ut labore et \n"
+            "dolore magna aliquyam erat, sed diam voluptua. At vero eos et "
+            "accusam et justo duo dolores et ea rebum. Stet clita kasd \n"
+            "gubergren, no sea takimata sanctus est Lorem ipsum dolor sit "
+            "amet. Lorem ipsum dolor sit amet, consetetur sadipscing \n"
+            "elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore "
+            "magna aliquyam erat, sed diam voluptua. At vero eos \n"
+            "et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, "
+            "no sea takimata sanctus est Lorem ipsum dolor sit amet."
+        )
     run(TEXT)
