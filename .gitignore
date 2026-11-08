@@ -35,3 +35,6 @@ pip-log.txt
 # Tool caches
 .pytest_cache/
 .ruff_cache/
+
+# Local Claude notes
+CLAUDE.local.md
